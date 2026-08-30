@@ -1,0 +1,24 @@
+{
+  "name": "order-service",
+  "version": "1.0.0",
+  "description": "ShopKart Order Microservice",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "worker": "node src/workers/sqsWorker.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-sns": "^3.1121.0",
+    "@aws-sdk/client-sqs": "^3.1121.0",
+    "axios": "^1.20.0",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.18.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}

@@ -1,0 +1,20 @@
+{   
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "shopkart",
+  "version": "1.0.0",
+  "description": "Scalable full-stack e commerce platform ",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "npm run dev --workspace=services/api-gateway"
+  },
+  "workspaces": [
+    "services/*"
+  ],
+  "dependencies": {
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
