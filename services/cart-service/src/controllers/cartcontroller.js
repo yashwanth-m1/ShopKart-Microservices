@@ -1,6 +1,5 @@
 import redisClient from "../config/redis.js";
 
-
 // ------------------------------------------
 // Helper: Generate Redis Cart Key
 // ------------------------------------------
@@ -9,40 +8,39 @@ const getCartKey = (userId) => {
   return `cart:${userId}`;
 };
 
-
 // ------------------------------------------
 // Helper: Calculate Cart Totals
 // ------------------------------------------
 
 const calculateCartTotals = (cart) => {
   cart.totalItems = cart.items.reduce(
-    (total, item) => total + item.quantity,
+    (total, item) => total + Number(item.quantity),
     0
   );
 
   cart.totalPrice = cart.items.reduce(
     (total, item) =>
-      total + item.price * item.quantity,
+      total +
+      Number(item.price) * Number(item.quantity),
     0
   );
 
   return cart;
 };
 
-
-// ------------------------------------------
+// ==========================================
 // GET CART
 // GET /api/cart
-// ------------------------------------------
+// ==========================================
 
 export const getCart = async (req, res) => {
   try {
     const userId = req.user.userId;
-
     const cartKey = getCartKey(userId);
 
     const cartData = await redisClient.get(cartKey);
 
+    // Return empty cart if no cart exists
     if (!cartData) {
       return res.status(200).json({
         success: true,
@@ -56,25 +54,25 @@ export const getCart = async (req, res) => {
 
     const cart = JSON.parse(cartData);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       cart
     });
+
   } catch (error) {
     console.error("Get cart error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Failed to get cart"
     });
   }
 };
 
-
-// ------------------------------------------
+// ==========================================
 // ADD PRODUCT TO CART
 // POST /api/cart
-// ------------------------------------------
+// ==========================================
 
 export const addToCart = async (req, res) => {
   try {
@@ -88,7 +86,7 @@ export const addToCart = async (req, res) => {
       image
     } = req.body;
 
-    // Validation
+    // Validate product ID
     if (!productId) {
       return res.status(400).json({
         success: false,
@@ -96,6 +94,7 @@ export const addToCart = async (req, res) => {
       });
     }
 
+    // Validate name
     if (!name) {
       return res.status(400).json({
         success: false,
@@ -103,31 +102,32 @@ export const addToCart = async (req, res) => {
       });
     }
 
-    if (price === undefined || price === null) {
+    // Validate price
+    if (
+      price === undefined ||
+      price === null
+    ) {
       return res.status(400).json({
         success: false,
         message: "Product price is required"
       });
     }
 
-    if (!quantity) {
-      return res.status(400).json({
-        success: false,
-        message: "Quantity is required"
-      });
-    }
-
-    if (quantity <= 0) {
+    // Validate quantity
+    if (
+      quantity === undefined ||
+      quantity === null ||
+      Number(quantity) <= 0
+    ) {
       return res.status(400).json({
         success: false,
         message: "Quantity must be greater than 0"
       });
     }
 
-    // Redis key
     const cartKey = getCartKey(userId);
 
-    // Get existing cart
+    // Get existing cart from Redis
     const existingCart = await redisClient.get(cartKey);
 
     let cart;
@@ -142,7 +142,7 @@ export const addToCart = async (req, res) => {
       };
     }
 
-    // Check whether product already exists
+    // Check if product already exists
     const existingItem = cart.items.find(
       (item) => item.productId === productId
     );
@@ -162,42 +162,45 @@ export const addToCart = async (req, res) => {
     // Calculate totals
     calculateCartTotals(cart);
 
-    // Save cart
+    // Save cart in Redis
     await redisClient.set(
       cartKey,
       JSON.stringify(cart)
     );
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Product added to cart",
       cart
     });
+
   } catch (error) {
     console.error("Add to cart error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Failed to add product to cart"
     });
   }
 };
 
-
-// ------------------------------------------
+// ==========================================
 // UPDATE CART ITEM
 // PUT /api/cart/:productId
-// ------------------------------------------
+// ==========================================
 
 export const updateCartItem = async (req, res) => {
   try {
     const userId = req.user.userId;
-
     const { productId } = req.params;
-
     const { quantity } = req.body;
 
-    if (!quantity || quantity <= 0) {
+    // Validate quantity
+    if (
+      quantity === undefined ||
+      quantity === null ||
+      Number(quantity) <= 0
+    ) {
       return res.status(400).json({
         success: false,
         message: "Quantity must be greater than 0"
@@ -206,8 +209,7 @@ export const updateCartItem = async (req, res) => {
 
     const cartKey = getCartKey(userId);
 
-    const existingCart =
-      await redisClient.get(cartKey);
+    const existingCart = await redisClient.get(cartKey);
 
     if (!existingCart) {
       return res.status(404).json({
@@ -229,46 +231,47 @@ export const updateCartItem = async (req, res) => {
       });
     }
 
+    // Update quantity
     item.quantity = Number(quantity);
 
+    // Recalculate totals
     calculateCartTotals(cart);
 
+    // Save updated cart
     await redisClient.set(
       cartKey,
       JSON.stringify(cart)
     );
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Cart updated successfully",
       cart
     });
+
   } catch (error) {
     console.error("Update cart error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Failed to update cart"
     });
   }
 };
 
-
-// ------------------------------------------
+// ==========================================
 // REMOVE PRODUCT FROM CART
 // DELETE /api/cart/:productId
-// ------------------------------------------
+// ==========================================
 
 export const removeFromCart = async (req, res) => {
   try {
     const userId = req.user.userId;
-
     const { productId } = req.params;
 
     const cartKey = getCartKey(userId);
 
-    const existingCart =
-      await redisClient.get(cartKey);
+    const existingCart = await redisClient.get(cartKey);
 
     if (!existingCart) {
       return res.status(404).json({
@@ -281,10 +284,12 @@ export const removeFromCart = async (req, res) => {
 
     const originalLength = cart.items.length;
 
+    // Remove selected product
     cart.items = cart.items.filter(
       (item) => item.productId !== productId
     );
 
+    // Product was not found
     if (cart.items.length === originalLength) {
       return res.status(404).json({
         success: false,
@@ -292,36 +297,38 @@ export const removeFromCart = async (req, res) => {
       });
     }
 
+    // Calculate new totals
     calculateCartTotals(cart);
 
+    // Save cart
     await redisClient.set(
       cartKey,
       JSON.stringify(cart)
     );
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Product removed from cart",
       cart
     });
+
   } catch (error) {
     console.error(
       "Remove from cart error:",
       error
     );
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Failed to remove product"
     });
   }
 };
 
-
-// ------------------------------------------
-// CLEAR CART
+// ==========================================
+// CLEAR ENTIRE CART
 // DELETE /api/cart
-// ------------------------------------------
+// ==========================================
 
 export const clearCart = async (req, res) => {
   try {
@@ -329,16 +336,25 @@ export const clearCart = async (req, res) => {
 
     const cartKey = getCartKey(userId);
 
-    await redisClient.del(cartKey);
+    console.log("Clearing Redis cart:", cartKey);
 
-    res.status(200).json({
+    // Delete user's cart from Redis
+    const result = await redisClient.del(cartKey);
+
+    console.log("Redis delete result:", result);
+
+    return res.status(200).json({
       success: true,
       message: "Cart cleared successfully"
     });
-  } catch (error) {
-    console.error("Clear cart error:", error);
 
-    res.status(500).json({
+  } catch (error) {
+    console.error(
+      "Clear cart error:",
+      error
+    );
+
+    return res.status(500).json({
       success: false,
       message: "Failed to clear cart"
     });

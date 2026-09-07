@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import cors from "cors";
 import {
   createProxyMiddleware,
   fixRequestBody
@@ -14,6 +15,21 @@ const PRODUCT_SERVICE_URL = process.env.PRODUCT_SERVICE_URL;
 const CART_SERVICE_URL = process.env.CART_SERVICE_URL;
 const ORDER_SERVICE_URL = process.env.ORDER_SERVICE_URL;
 
+// =====================================================
+// CORS
+// =====================================================
+
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"]
+  })
+);
+
+// =====================================================
+// Environment URLs
+// =====================================================
 
 console.log("=================================");
 console.log("USER_SERVICE_URL:", USER_SERVICE_URL);
@@ -35,19 +51,8 @@ app.get("/health", (req, res) => {
 
 // =====================================================
 // USER SERVICE
-// =====================================================
-//
 // Gateway:
-// POST http://localhost:3000/api/users/register
-//
-// Goes to User Service:
-// POST http://localhost:USER_PORT/api/auth/register
-//
-// Gateway:
-// POST http://localhost:3000/api/users/login
-//
-// Goes to User Service:
-// POST http://localhost:USER_PORT/api/auth/login
+// http://localhost:3000/api/users/...
 // =====================================================
 
 app.use(
@@ -95,25 +100,8 @@ app.use(
 
 // =====================================================
 // PRODUCT SERVICE
-// =====================================================
-//
 // Gateway:
-// POST http://localhost:3000/api/products
-//
-// Goes to Product Service:
-// POST http://localhost:PRODUCT_PORT/api/products
-//
-// Gateway:
-// GET http://localhost:3000/api/products
-//
-// Goes to Product Service:
-// GET http://localhost:PRODUCT_PORT/api/products
-//
-// Gateway:
-// GET http://localhost:3000/api/products/:id
-//
-// Goes to Product Service:
-// GET http://localhost:PRODUCT_PORT/api/products/:id
+// http://localhost:3000/api/products/...
 // =====================================================
 
 app.use(
@@ -158,19 +146,11 @@ app.use(
     }
   })
 );
-// ------------------------------------------
-// CART SERVICE
-// ------------------------------------------
 
 // =====================================================
 // CART SERVICE
-// =====================================================
-//
 // Gateway:
-// GET http://localhost:3000/api/cart
-//
-// Goes to Cart Service:
-// GET http://localhost:3003/api/cart
+// http://localhost:3000/api/cart/...
 // =====================================================
 
 app.use(
@@ -215,16 +195,12 @@ app.use(
     }
   })
 );
-// ==========================================
-// Order Service Proxy
-// ==========================================
-// ==========================================
-// Order Service Proxy
-// ==========================================
 
-// ==========================================
-// Order Service Proxy
-// ==========================================
+// =====================================================
+// ORDER SERVICE
+// Gateway:
+// http://localhost:3000/api/orders/...
+// =====================================================
 
 app.use(
   createProxyMiddleware({
@@ -262,14 +238,11 @@ app.use(
     }
   })
 );
-// 
 
 // =====================================================
 // Start Server
 // =====================================================
 
 app.listen(PORT, () => {
-  console.log(
-    `API Gateway running on port ${PORT}`
-  );
+  console.log(`API Gateway running on port ${PORT}`);
 });

@@ -9,6 +9,7 @@ import {
 } from "../controllers/ordercontroller.js";
 
 import { authenticate } from "../middleware/authmiddleware.js";
+import { adminOnly } from "../middleware/authmiddleware.js";
 
 const router = express.Router();
 
@@ -68,6 +69,13 @@ router.get(
   "/:orderId",
   authenticate,
   getOrderById
+);
+
+router.patch(
+  "/:orderId/status",
+  authenticate,
+  adminOnly,
+  updateOrderStatus
 );
 
 export default router;

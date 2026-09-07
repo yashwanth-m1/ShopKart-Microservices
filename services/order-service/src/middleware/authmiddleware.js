@@ -1,55 +1,79 @@
 import jwt from "jsonwebtoken";
 
+// ==========================================
+// AUTHENTICATION MIDDLEWARE
+// ==========================================
+
 export const authenticate = (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
 
-    // Check Authorization header
-    if (!authHeader) {
+    if (
+      !authHeader ||
+      !authHeader.startsWith("Bearer ")
+    ) {
       return res.status(401).json({
         success: false,
-        message: "Authorization header is required"
+        message: "Authentication required"
       });
     }
 
-    // Check Bearer format
-    if (!authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid authorization format"
-      });
-    }
-
-    // Extract token
     const token = authHeader.split(" ")[1];
 
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: "Token is required"
-      });
-    }
-
-    // Verify JWT
     const decoded = jwt.verify(
       token,
       process.env.JWT_SECRET
     );
 
-    // Store decoded user information
     req.user = decoded;
 
     next();
 
   } catch (error) {
     console.error(
-      "Order authentication error:",
+      "Authentication error:",
       error.message
     );
 
     return res.status(401).json({
       success: false,
       message: "Invalid or expired token"
+    });
+  }
+};
+
+
+// ==========================================
+// ADMIN AUTHORIZATION MIDDLEWARE
+// ==========================================
+
+export const adminOnly = (req, res, next) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required"
+      });
+    }
+
+    if (req.user.role !== "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Admin access required"
+      });
+    }
+
+    next();
+
+  } catch (error) {
+    console.error(
+      "Admin authorization error:",
+      error.message
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Authorization failed"
     });
   }
 };

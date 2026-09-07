@@ -1,18 +1,29 @@
 import Product from "../models/product.js";
 import s3Client from "../config/s3.js";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
-// CREATE PRODUCT
+
+// ==========================================
+// CREATE PRODUCT WITH IMAGE
+// POST /api/products
+// ==========================================
+
 export const createProduct = async (req, res) => {
   try {
+    console.log("REQ BODY:", req.body);
+    console.log("REQ FILE:", req.file);
+
     const {
       name,
       description,
       price,
       category,
       brand,
-      stock,
-      images
+      stock
     } = req.body;
+
+    // ------------------------------------------
+    // Validate Product Data
+    // ------------------------------------------
 
     if (
       !name ||
@@ -28,36 +39,77 @@ export const createProduct = async (req, res) => {
       });
     }
 
+    // ------------------------------------------
+    // Image Array
+    // ------------------------------------------
+
+    const images = [];
+
+    // ------------------------------------------
+    // Upload Image to AWS S3
+    // ------------------------------------------
+
+    if (req.file) {
+      const fileName = `products/${Date.now()}-${req.file.originalname}`;
+
+      const command = new PutObjectCommand({
+        Bucket: process.env.AWS_S3_BUCKET_NAME,
+        Key: fileName,
+        Body: req.file.buffer,
+        ContentType: req.file.mimetype
+      });
+
+      await s3Client.send(command);
+
+      const imageUrl =
+        `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileName}`;
+
+      images.push(imageUrl);
+
+      console.log("Image uploaded to S3:", imageUrl);
+    }
+
+    // ------------------------------------------
+    // Create Product in MongoDB
+    // ------------------------------------------
+
     const product = await Product.create({
       name,
       description,
-      price,
+      price: Number(price),
       category,
       brand,
-      stock: stock || 0,
-      images: images || []
+      stock: Number(stock) || 0,
+      images
     });
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       message: "Product created successfully",
       product
     });
+
   } catch (error) {
     console.error("Create product error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: "Internal server error"
+      message:
+        error.message || "Internal server error"
     });
   }
 };
 
 
+// ==========================================
 // GET ALL PRODUCTS
+// GET /api/products
+// ==========================================
+
 export const getProducts = async (req, res) => {
   try {
     const page = Math.max(Number(req.query.page) || 1, 1);
+
     const limit = Math.min(
       Math.max(Number(req.query.limit) || 10, 1),
       100
@@ -76,7 +128,7 @@ export const getProducts = async (req, res) => {
       isActive: true
     });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       page,
       limit,
@@ -84,10 +136,11 @@ export const getProducts = async (req, res) => {
       totalPages: Math.ceil(totalProducts / limit),
       products
     });
+
   } catch (error) {
     console.error("Get products error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Internal server error"
     });
@@ -95,7 +148,11 @@ export const getProducts = async (req, res) => {
 };
 
 
+// ==========================================
 // GET PRODUCT BY ID
+// GET /api/products/:id
+// ==========================================
+
 export const getProductById = async (req, res) => {
   try {
     const product = await Product.findOne({
@@ -110,14 +167,15 @@ export const getProductById = async (req, res) => {
       });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       product
     });
+
   } catch (error) {
     console.error("Get product error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Internal server error"
     });
@@ -125,7 +183,11 @@ export const getProductById = async (req, res) => {
 };
 
 
+// ==========================================
 // UPDATE PRODUCT
+// PUT /api/products/:id
+// ==========================================
+
 export const updateProduct = async (req, res) => {
   try {
     const product = await Product.findByIdAndUpdate(
@@ -144,23 +206,30 @@ export const updateProduct = async (req, res) => {
       });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Product updated successfully",
       product
     });
+
   } catch (error) {
     console.error("Update product error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: "Internal server error"
+      message:
+        error.message || "Internal server error"
     });
   }
 };
 
 
+// ==========================================
 // DELETE PRODUCT
+// DELETE /api/products/:id
+// SOFT DELETE
+// ==========================================
+
 export const deleteProduct = async (req, res) => {
   try {
     const product = await Product.findByIdAndUpdate(
@@ -180,19 +249,21 @@ export const deleteProduct = async (req, res) => {
       });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Product deleted successfully"
     });
+
   } catch (error) {
     console.error("Delete product error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Internal server error"
     });
   }
 };
+
 
 // ==========================================
 // REDUCE PRODUCT STOCK
@@ -203,7 +274,6 @@ export const reduceStock = async (req, res) => {
   try {
     const { quantity } = req.body;
 
-    // Validate quantity
     if (
       quantity === undefined ||
       quantity === null ||
@@ -215,7 +285,6 @@ export const reduceStock = async (req, res) => {
       });
     }
 
-    // Find product and make sure enough stock exists
     const product = await Product.findOne({
       _id: req.params.id,
       isActive: true
@@ -228,8 +297,7 @@ export const reduceStock = async (req, res) => {
       });
     }
 
-    // Check stock availability
-    if (product.stock < Number(quantity)) {
+    if (Number(product.stock) < Number(quantity)) {
       return res.status(400).json({
         success: false,
         message: "Insufficient product stock",
@@ -237,7 +305,6 @@ export const reduceStock = async (req, res) => {
       });
     }
 
-    // Reduce stock
     product.stock -= Number(quantity);
 
     await product.save();
@@ -259,6 +326,7 @@ export const reduceStock = async (req, res) => {
   }
 };
 
+
 // ==========================================
 // RESTORE PRODUCT STOCK
 // PATCH /api/products/:id/restore-stock
@@ -268,7 +336,6 @@ export const restoreStock = async (req, res) => {
   try {
     const { quantity } = req.body;
 
-    // Validate quantity
     if (
       quantity === undefined ||
       quantity === null ||
@@ -280,7 +347,6 @@ export const restoreStock = async (req, res) => {
       });
     }
 
-    // Find product
     const product = await Product.findOne({
       _id: req.params.id,
       isActive: true
@@ -293,7 +359,6 @@ export const restoreStock = async (req, res) => {
       });
     }
 
-    // Restore stock
     product.stock += Number(quantity);
 
     await product.save();
@@ -315,7 +380,8 @@ export const restoreStock = async (req, res) => {
   }
 };
 
- // ==========================================
+
+// ==========================================
 // UPLOAD PRODUCT IMAGE TO AWS S3
 // POST /api/products/:id/images
 // ==========================================
@@ -324,7 +390,12 @@ export const uploadProductImage = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Check uploaded file
+    console.log("REQ FILE:", req.file);
+
+    // ------------------------------------------
+    // Check Uploaded File
+    // ------------------------------------------
+
     if (!req.file) {
       return res.status(400).json({
         success: false,
@@ -332,7 +403,10 @@ export const uploadProductImage = async (req, res) => {
       });
     }
 
-    // Check product exists
+    // ------------------------------------------
+    // Check Product Exists
+    // ------------------------------------------
+
     const product = await Product.findOne({
       _id: id,
       isActive: true
@@ -345,10 +419,17 @@ export const uploadProductImage = async (req, res) => {
       });
     }
 
-    // Create unique file name
-    const fileName = `products/${Date.now()}-${req.file.originalname}`;
+    // ------------------------------------------
+    // Create Unique File Name
+    // ------------------------------------------
 
-    // Upload image to S3
+    const fileName =
+      `products/${Date.now()}-${req.file.originalname}`;
+
+    // ------------------------------------------
+    // Upload Image to S3
+    // ------------------------------------------
+
     const command = new PutObjectCommand({
       Bucket: process.env.AWS_S3_BUCKET_NAME,
       Key: fileName,
@@ -358,11 +439,17 @@ export const uploadProductImage = async (req, res) => {
 
     await s3Client.send(command);
 
-    // Generate image URL
+    // ------------------------------------------
+    // Generate S3 Image URL
+    // ------------------------------------------
+
     const imageUrl =
       `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileName}`;
 
-    // Save image URL in MongoDB
+    // ------------------------------------------
+    // Save Image URL in MongoDB
+    // ------------------------------------------
+
     product.images.push(imageUrl);
 
     await product.save();
@@ -375,11 +462,16 @@ export const uploadProductImage = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Upload product image error:", error);
+    console.error(
+      "Upload product image error:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
-      message: "Failed to upload product image"
+      message:
+        error.message ||
+        "Failed to upload product image"
     });
   }
 };
