@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = "http://shopkart-alb-1432762149.eu-north-1.elb.amazonaws.com";
+const API_URL = "https://d2o8lzgxvs6ck1.cloudfront.net";
 
 const api = axios.create({
   baseURL: API_URL,

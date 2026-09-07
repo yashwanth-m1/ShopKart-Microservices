@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import axios from "axios";
 import "./Admin.css";
 
-const API_URL = "http://shopkart-alb-1432762149.eu-north-1.elb.amazonaws.com";
+const API_URL = "https://d2o8lzgxvs6ck1.cloudfront.net";
 
 function AdminOrders() {
   const [orders, setOrders] = useState([]);
