@@ -3,7 +3,7 @@ import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
 import "./Admin.css";
 
-const API_URL = "http://localhost:3000";
+const API_URL = "http://shopkart-alb-1432762149.eu-north-1.elb.amazonaws.com";
 
 function AdminProducts() {
   const navigate = useNavigate();

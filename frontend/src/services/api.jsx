@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:3000";
+const API_URL = "http://shopkart-alb-1432762149.eu-north-1.elb.amazonaws.com";
 
 const api = axios.create({
   baseURL: API_URL,
