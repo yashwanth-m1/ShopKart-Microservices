@@ -28,7 +28,7 @@ function Login() {
       setError("");
 
       const response = await api.post(
-        "/api/auth/login",
+        "/api/users/login",
         formData
       );
 
